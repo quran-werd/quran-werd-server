@@ -1,9 +1,9 @@
 import express from "express";
-import { createUser } from "../services";
+import { login, verifyLogin } from "../services";
 
 var userRouter = express.Router();
 
-userRouter.get("/", createUser);
-userRouter.post("/create", createUser);
+userRouter.post("/login", login);
+userRouter.post("/login/verify", verifyLogin);
 
 export default userRouter;
