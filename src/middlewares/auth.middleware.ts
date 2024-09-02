@@ -16,7 +16,7 @@ export const jwtAuth = (req: Request, res: Response, next: NextFunction) => {
         return res.sendStatus(403); // Forbidden
       }
 
-      req.userId = (payload as JWTPayload).userId;
+      req.user_id = (payload as JWTPayload).user_id;
 
       next();
     });

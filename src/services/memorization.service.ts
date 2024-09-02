@@ -1,4 +1,5 @@
 import User, { IUser } from "../models/User";
+import { Memorization, MemorizedVersesRange } from "../types/memorization.type";
 
 export const addMemorizedRange = async (user_id: string, chapter_number: number, from: number, to: number): Promise<IUser | null> => {
   const user = await User.findById(user_id);
@@ -33,13 +34,12 @@ export const addMemorizedRange = async (user_id: string, chapter_number: number,
   }
 };
 
-export const getMemorizationByChapterNumber = async (user_id: string, chapter_number: number): Promise<boolean> => {
+export const getMemorizationByChapterNumber = async (user_id: string, chapter_number: number): Promise<MemorizedVersesRange[] | undefined> => {
+  const memorizations = await getMemorizations(user_id);
+  return memorizations?.[chapter_number];
+};
+
+export const getMemorizations = async (user_id: string): Promise<Memorization | undefined> => {
   const user = await User.findById(user_id);
-
-  if (!user) {
-    console.log("User not found");
-    return false;
-  }
-
-  return true;
+  return user?.memorizations;
 };

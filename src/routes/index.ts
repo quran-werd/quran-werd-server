@@ -11,6 +11,6 @@ app.get("/", (request: Request, response: Response) => {
 });
 
 app.use("/users", userRouter);
-app.use("/memorization", memorizationRouter);
+app.use("/memorizations", memorizationRouter);
 
 export default app;
