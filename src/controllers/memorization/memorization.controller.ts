@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { addMemorizedRange } from "../../services";
-export const addMemorization = async (req: Request, res: Response) => {
-  const { userId, chapter_number, from, to } = req.body;
 
-  const user = await addMemorizedRange(userId, chapter_number, from, to);
+export const addMemorization = async (req: Request, res: Response) => {
+  const { body, userId } = req;
+  const { chapter_number, from, to } = body;
+
+  const user = await addMemorizedRange(userId!, chapter_number, from, to);
 
   if (!user) {
     res.sendStatus(400);

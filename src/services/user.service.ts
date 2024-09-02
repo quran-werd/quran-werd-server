@@ -1,21 +1,41 @@
 import { Request, Response } from "express";
+import { sendOtp, verifyOtp } from "./twilio.service";
+import { generateToken } from "./jwt.service";
 import User from "../models/User";
 
-// Example: Creating a new user
-export const createUser = async (req: Request, res: Response) => {
-  console.log(1111, "Yaaay");
-  const user = new User({
-    phone: "0785352060",
-    memorizations: [],
-  });
+export const login = async (req: Request, res: Response) => {
+  const { phone } = req.body;
 
-  await user.save();
-  console.log("User created:", user);
+  const verification = await sendOtp(phone);
 
-  res.sendStatus(200);
+  if (!verification) {
+    res.sendStatus(500);
+  }
+
+  res.status(200).send(verification);
 };
 
-export const getUser = async (req: Request, res: Response) => {
-  const user = await User.findOne();
-  res.sendStatus(200).json(user);
+export const verifyLogin = async (req: Request, res: Response) => {
+  const { phone, otp } = req.body;
+
+  try {
+    await verifyOtp(phone, otp);
+
+    const user = await getUserByPhone(phone);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const token = generateToken(user?.id);
+
+    res.status(200).send(token);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+};
+
+export const getUserByPhone = async (phone: number) => {
+  const user = await User.findOne({ phone });
+  return user;
 };
