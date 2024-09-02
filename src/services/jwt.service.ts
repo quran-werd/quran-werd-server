@@ -5,9 +5,9 @@ dotenv.config();
 
 const jwtSecretKey = process.env.JWT_SECRET_KEY || "";
 
-export type JWTPayload = { userId: string };
+export type JWTPayload = { user_id: string };
 
-export const generateToken = (userId: string) => {
-  const payload: JWTPayload = { userId };
+export const generateToken = (user_id: string) => {
+  const payload: JWTPayload = { user_id };
   return jwt.sign(payload, jwtSecretKey, {});
 };

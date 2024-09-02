@@ -1,15 +1,10 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { MemorizedVersesRange } from "../types/memorization.type";
-
-// Define the interface for the Memorized object
-interface IMemorization {
-  [chapter: number]: MemorizedVersesRange[];
-}
+import { Memorization } from "../types/memorization.type";
 
 // Define interface for User
 export interface IUser extends Document {
   phone: string;
-  memorizations: IMemorization;
+  memorizations: Memorization;
 }
 
 // Create schema for User
