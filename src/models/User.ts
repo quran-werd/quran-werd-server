@@ -5,6 +5,7 @@ import { Memorization } from "../types/memorization.type";
 export interface IUser extends Document {
   phone: string;
   memorizations: Memorization;
+  refreshToken?: string;
 }
 
 // Create schema for User
@@ -25,6 +26,10 @@ const UserSchema: Schema<IUser> = new Schema(
         },
       ],
       required: true,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
     },
   },
   {
