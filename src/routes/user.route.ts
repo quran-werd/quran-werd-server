@@ -7,3 +7,5 @@ userRouter.post("/login", login);
 userRouter.post("/login/verify", verifyLogin);
 userRouter.post("/refresh", refresh);
 userRouter.post("/logout", jwtAuth, logout);
+
+export default userRouter;

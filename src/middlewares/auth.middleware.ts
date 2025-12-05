@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { verifyAccessToken, JWTPayload } from "../services/jwt.service";
 
-export const jwtAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const jwtAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {

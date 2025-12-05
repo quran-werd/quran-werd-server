@@ -4,7 +4,8 @@ import jwt from "jsonwebtoken";
 dotenv.config();
 
 const jwtSecretKey = process.env.JWT_SECRET_KEY || "";
-const jwtRefreshSecretKey = process.env.JWT_REFRESH_SECRET_KEY || jwtSecretKey + "_refresh";
+const jwtRefreshSecretKey =
+  process.env.JWT_REFRESH_SECRET_KEY || jwtSecretKey + "_refresh";
 
 export type JWTPayload = {
   user_id: string;

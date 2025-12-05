@@ -1,0 +1,441 @@
+{
+  "info": {
+    "_postman_id": "quran-werd-api-collection",
+    "name": "Quran Werd API",
+    "description": "API collection for Quran Werd Server - Authentication and Memorization endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login - Send OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has message\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{phone}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["users", "login"]
+            },
+            "description": "Send OTP to user's phone number"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Login - Get Tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has tokens\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('accessToken');",
+                  "    pm.expect(jsonData).to.have.property('refreshToken');",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    ",
+                  "    // Save tokens to both environment and collection variables",
+                  "    if (pm.environment.has('accessToken')) {",
+                  "        pm.environment.set('accessToken', jsonData.accessToken);",
+                  "    }",
+                  "    if (pm.environment.has('refreshToken')) {",
+                  "        pm.environment.set('refreshToken', jsonData.refreshToken);",
+                  "    }",
+                  "    ",
+                  "    // Also save to collection variables (works even without environment)",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    ",
+                  "    console.log('✅ Tokens saved successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{phone}}\",\n    \"otp\": \"{{otp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/login/verify",
+              "host": ["{{base_url}}"],
+              "path": ["users", "login", "verify"]
+            },
+            "description": "Verify OTP and receive access token and refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has new access token\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('accessToken');",
+                  "    ",
+                  "    // Update access token in both environment and collection variables",
+                  "    if (pm.environment.has('accessToken')) {",
+                  "        pm.environment.set('accessToken', jsonData.accessToken);",
+                  "    }",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    ",
+                  "    console.log('✅ Access token refreshed successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["users", "refresh"]
+            },
+            "description": "Get a new access token using refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Logout successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    ",
+                  "    // Clear tokens from both environment and collection variables",
+                  "    if (pm.environment.has('accessToken')) {",
+                  "        pm.environment.unset('accessToken');",
+                  "    }",
+                  "    if (pm.environment.has('refreshToken')) {",
+                  "        pm.environment.unset('refreshToken');",
+                  "    }",
+                  "    pm.collectionVariables.unset('accessToken');",
+                  "    pm.collectionVariables.unset('refreshToken');",
+                  "    ",
+                  "    console.log('✅ Logged out - tokens cleared');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/logout",
+              "host": ["{{base_url}}"],
+              "path": ["users", "logout"]
+            },
+            "description": "Logout user and invalidate refresh token"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for user login, token refresh, and logout"
+    },
+    {
+      "name": "Memorizations",
+      "item": [
+        {
+          "name": "Get All Memorizations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an object\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memorizations",
+              "host": ["{{base_url}}"],
+              "path": ["memorizations"]
+            },
+            "description": "Get all memorizations for the authenticated user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Memorization by Chapter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memorizations/:chapter_number",
+              "host": ["{{base_url}}"],
+              "path": ["memorizations", ":chapter_number"],
+              "variable": [
+                {
+                  "key": "chapter_number",
+                  "value": "1",
+                  "description": "Chapter number (1-114)"
+                }
+              ]
+            },
+            "description": "Get memorizations for a specific chapter"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Memorization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('memorizations');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"chapter_number\": 1,\n    \"from\": 1,\n    \"to\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/memorizations/add",
+              "host": ["{{base_url}}"],
+              "path": ["memorizations", "add"]
+            },
+            "description": "Add a memorization range for a chapter (from verse to verse)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Memorization endpoints - requires authentication"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set Authorization header for authenticated requests",
+          "if (pm.request.auth && pm.request.auth.type === 'bearer') {",
+          "    // Try to get token from environment first, then collection variables",
+          "    let token = pm.environment.get('accessToken');",
+          "    if (!token) {",
+          "        token = pm.collectionVariables.get('accessToken');",
+          "    }",
+          "    if (token) {",
+          "        pm.request.headers.add({",
+          "            key: 'Authorization',",
+          "            value: `Bearer ${token}`",
+          "        });",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "phone",
+      "value": "+962785352060",
+      "type": "string"
+    },
+    {
+      "key": "otp",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
