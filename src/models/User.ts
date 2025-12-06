@@ -1,10 +1,8 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { Memorization } from "../types/memorization.type";
 
 // Define interface for User
 export interface IUser extends Document {
   phone: string;
-  memorizations: Memorization;
   refreshToken?: string;
 }
 
@@ -15,16 +13,6 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       index: true,
       unique: true,
-      required: true,
-    },
-    memorizations: {
-      type: Object,
-      of: [
-        {
-          from: { type: Number, required: true },
-          to: { type: Number, required: true },
-        },
-      ],
       required: true,
     },
     refreshToken: {

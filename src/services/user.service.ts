@@ -42,7 +42,6 @@ export const verifyLogin = async (req: Request, res: Response) => {
       // Auto-create user if doesn't exist
       user = await User.create({
         phone: String(phone),
-        memorizations: {},
       });
     }
 
