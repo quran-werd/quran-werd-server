@@ -1,8 +1,12 @@
 import express, { Request, Response } from "express";
+import morgan from "morgan";
 import memorizationRouter from "./memorization.route";
 import userRouter from "./user.route";
 
 const app = express();
+
+// Logging middleware
+app.use(morgan("dev"));
 
 app.use(express.json());
 
