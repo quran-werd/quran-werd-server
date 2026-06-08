@@ -1,4 +1,4 @@
-import Memorization, { Range } from "../models/Memorization";
+import Memorization, { Range, buildRangeId } from "../models/Memorization";
 import {
   addRangeToSurahRanges,
   removeRangeFromSurahRanges,
@@ -12,7 +12,7 @@ export type MemorizationData = {
 };
 
 const rangesMapToObject = (
-  ranges: Map<string, Range[]> | Record<string, Range[]>
+  ranges: Map<string, Range[]> | Record<string, Range[]>,
 ): Record<string, Range[]> => {
   if (ranges instanceof Map) {
     const obj: Record<string, Range[]> = {};
@@ -34,6 +34,24 @@ const toMemorizationData = (doc: {
   ranges: rangesMapToObject(doc.ranges),
 });
 
+const toUniqueRanges = (
+  surah: number,
+  ranges: Array<{ from: number; to: number }>,
+): Range[] => {
+  const seen = new Set<string>();
+
+  return ranges.reduce<Range[]>((unique, range) => {
+    const rangeId = buildRangeId(surah, range.from, range.to);
+    if (seen.has(rangeId)) {
+      return unique;
+    }
+
+    seen.add(rangeId);
+    unique.push({ rangeId, from: range.from, to: range.to });
+    return unique;
+  }, []);
+};
+
 export const getOrCreateMemorization = async (userId: string) => {
   let doc = await Memorization.findOne({ userId });
   if (!doc) {
@@ -43,7 +61,7 @@ export const getOrCreateMemorization = async (userId: string) => {
 };
 
 export const getMemorizations = async (
-  userId: string
+  userId: string,
 ): Promise<MemorizationData> => {
   const doc = await getOrCreateMemorization(userId);
   return toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]);
@@ -53,7 +71,7 @@ export const addRange = async (
   userId: string,
   surah: number,
   from: number,
-  to: number
+  to: number,
 ): Promise<{ data: MemorizationData; merged: boolean }> => {
   const validationError = validateRange(surah, from, to);
   if (validationError) {
@@ -63,24 +81,30 @@ export const addRange = async (
   const doc = await getOrCreateMemorization(userId);
   const rangesObj = rangesMapToObject(doc.ranges);
   const surahKey = String(surah);
-  const existing = rangesObj[surahKey] || [];
+  const existing = (rangesObj[surahKey] || []).map(({ from: rangeFrom, to: rangeTo }) => ({
+    from: rangeFrom,
+    to: rangeTo,
+  }));
   const beforeCount = existing.length;
   const mergedRanges = addRangeToSurahRanges(existing, { from, to });
   const merged = mergedRanges.length < beforeCount + 1;
 
-  rangesObj[surahKey] = mergedRanges;
+  rangesObj[surahKey] = toUniqueRanges(surah, mergedRanges);
   doc.ranges = rangesObj as unknown as Map<string, Range[]>;
   doc.markModified("ranges");
   await doc.save();
 
-  return { data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]), merged };
+  return {
+    data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
+    merged,
+  };
 };
 
 export const deleteRange = async (
   userId: string,
   surah: number,
   from: number,
-  to: number
+  to: number,
 ): Promise<MemorizationData> => {
   const doc = await Memorization.findOne({ userId });
   if (!doc) {
@@ -90,7 +114,13 @@ export const deleteRange = async (
   const rangesObj = rangesMapToObject(doc.ranges);
   const surahKey = String(surah);
   const existing = rangesObj[surahKey] || [];
-  const updated = removeRangeFromSurahRanges(existing, { from, to });
+  const updated = removeRangeFromSurahRanges(
+    existing.map(({ from: rangeFrom, to: rangeTo }) => ({
+      from: rangeFrom,
+      to: rangeTo,
+    })),
+    { from, to },
+  );
 
   const hadRange = updated.length < existing.length;
   if (!hadRange) {
@@ -100,7 +130,7 @@ export const deleteRange = async (
   if (updated.length === 0) {
     delete rangesObj[surahKey];
   } else {
-    rangesObj[surahKey] = updated;
+    rangesObj[surahKey] = toUniqueRanges(surah, updated);
   }
 
   doc.ranges = rangesObj as unknown as Map<string, Range[]>;
@@ -111,7 +141,7 @@ export const deleteRange = async (
 };
 
 export const getAllRangesFlat = (
-  ranges: Record<string, Range[]>
+  ranges: Record<string, Range[]>,
 ): Array<{ surah: number; from: number; to: number }> => {
   const result: Array<{ surah: number; from: number; to: number }> = [];
   for (const [surahKey, surahRanges] of Object.entries(ranges)) {

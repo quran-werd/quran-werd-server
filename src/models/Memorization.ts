@@ -1,9 +1,16 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export type Range = {
+  rangeId: string;
   from: number;
   to: number;
 };
+
+export const buildRangeId = (
+  surah: number,
+  from: number,
+  to: number,
+): string => `${surah}:${from}:${to}`;
 
 export interface IMemorization extends Document {
   userId: mongoose.Types.ObjectId;
@@ -12,10 +19,11 @@ export interface IMemorization extends Document {
 
 const RangeSchema = new Schema(
   {
+    rangeId: { type: String, required: true },
     from: { type: Number, required: true },
     to: { type: Number, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const MemorizationSchema: Schema<IMemorization> = new Schema(
