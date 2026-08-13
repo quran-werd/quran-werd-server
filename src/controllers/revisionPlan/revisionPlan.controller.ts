@@ -48,3 +48,46 @@ export const updateCapacity = async (req: Request, res: Response) => {
     return sendError(res, message, status);
   }
 };
+
+export const getToday = async (req: Request, res: Response) => {
+  try {
+    const data = await RevisionPlanService.getTodayWerd(req.user_id!);
+    return sendSuccess(res, data);
+  } catch {
+    return sendError(res, "Internal server error", 500);
+  }
+};
+
+export const getNext = async (req: Request, res: Response) => {
+  try {
+    const werd = await RevisionPlanService.getNextWerd(req.user_id!);
+    return sendSuccess(res, { werd });
+  } catch {
+    return sendError(res, "Internal server error", 500);
+  }
+};
+
+export const complete = async (req: Request, res: Response) => {
+  const { werdId } = req.body;
+  if (!werdId || typeof werdId !== "string") {
+    return sendError(res, "werdId is required", 400);
+  }
+
+  try {
+    const { werd, alreadyCompleted } = await RevisionPlanService.completeWerd(
+      req.user_id!,
+      werdId
+    );
+    return sendSuccess(
+      res,
+      { werd, status: "completed", alreadyCompleted },
+      alreadyCompleted ? "Werd already completed" : "Werd marked as completed"
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    const status =
+      message === "Plan not found" || message === "Werd not found" ? 404 : 500;
+    return sendError(res, message, status);
+  }
+};

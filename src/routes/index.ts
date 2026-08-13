@@ -3,7 +3,6 @@ import morgan from "morgan";
 import authRouter from "./auth.route";
 import memorizationRouter from "./memorization.route";
 import revisionPlanRouter from "./revisionPlan.route";
-import revisionLogRouter from "./revisionLog.route";
 
 const app = express();
 
@@ -17,6 +16,5 @@ app.get("/", (_request: Request, response: Response) => {
 app.use("/auth", authRouter);
 app.use("/memorizations", memorizationRouter);
 app.use("/revision-plan", revisionPlanRouter);
-app.use("/revision-log", revisionLogRouter);
 
 export default app;

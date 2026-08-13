@@ -44,3 +44,25 @@ export const removeRangeFromSurahRanges = (
 
   return result;
 };
+
+export const subtractRangeFromRanges = (
+  ranges: Range[],
+  remove: Range
+): Range[] => {
+  const result: Range[] = [];
+
+  for (const range of ranges) {
+    if (remove.to < range.from || remove.from > range.to) {
+      result.push(range);
+      continue;
+    }
+    if (remove.from > range.from) {
+      result.push({ from: range.from, to: remove.from - 1 });
+    }
+    if (remove.to < range.to) {
+      result.push({ from: remove.to + 1, to: range.to });
+    }
+  }
+
+  return result;
+};

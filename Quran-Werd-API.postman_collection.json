@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "quran-werd-api-collection",
     "name": "Quran Werd API",
-    "description": "API collection for Quran Werd Server - Authentication and Memorization endpoints",
+    "description": "API collection for Quran Werd Server - Authentication, Memorization, and Revision Plan endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10,7 +10,7 @@
       "name": "Authentication",
       "item": [
         {
-          "name": "Login - Send OTP",
+          "name": "Google Sign-In",
           "event": [
             {
               "listen": "test",
@@ -20,9 +20,18 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has message\", function () {",
+                  "pm.test(\"Response has token and user\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "    ",
+                  "    // Save the JWT to both environment and collection variables",
+                  "    if (pm.environment.has('accessToken')) {",
+                  "        pm.environment.set('accessToken', jsonData.data.token);",
+                  "    }",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.token);",
+                  "    ",
+                  "    console.log('✅ Token saved successfully');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -39,7 +48,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"phone\": \"{{phone}}\"\n}",
+              "raw": "{\n    \"idToken\": \"{{idToken}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -47,16 +56,16 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/users/login",
+              "raw": "{{base_url}}/auth/google",
               "host": ["{{base_url}}"],
-              "path": ["users", "login"]
+              "path": ["auth", "google"]
             },
-            "description": "Send OTP to user's phone number"
+            "description": "Sign in (or sign up) with a Google ID token. `idToken` normally must come from a Google Sign-In client SDK (web/mobile) - Postman can't mint one itself. For local/dev testing, the server accepts a `mock:<base64 json>` idToken instead (the default value of the `idToken` variable decodes to `{\"googleId\":\"dev-1\",\"email\":\"dev@example.com\",\"name\":\"Dev User\"}`) - it must be base64, not raw JSON, since Postman substitutes {{idToken}} into this raw JSON body unescaped and literal quotes would break it. Requires the server to have `AUTH_MOCK_GOOGLE=true` set - never enable that in production. Creates the user on first sign-in, or updates name/email if they changed. Returns a single JWT (`data.token`); there is no separate refresh token / refresh endpoint."
           },
           "response": []
         },
         {
-          "name": "Verify Login - Get Tokens",
+          "name": "Get Current User",
           "event": [
             {
               "listen": "test",
@@ -66,25 +75,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has tokens\", function () {",
+                  "pm.test(\"Response has user fields\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('accessToken');",
-                  "    pm.expect(jsonData).to.have.property('refreshToken');",
-                  "    pm.expect(jsonData).to.have.property('user');",
-                  "    ",
-                  "    // Save tokens to both environment and collection variables",
-                  "    if (pm.environment.has('accessToken')) {",
-                  "        pm.environment.set('accessToken', jsonData.accessToken);",
-                  "    }",
-                  "    if (pm.environment.has('refreshToken')) {",
-                  "        pm.environment.set('refreshToken', jsonData.refreshToken);",
-                  "    }",
-                  "    ",
-                  "    // Also save to collection variables (works even without environment)",
-                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
-                  "    ",
-                  "    console.log('✅ Tokens saved successfully');",
+                  "    pm.expect(jsonData.data).to.have.property('_id');",
+                  "    pm.expect(jsonData.data).to.have.property('email');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -92,82 +86,24 @@
             }
           ],
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"phone\": \"{{phone}}\",\n    \"otp\": \"{{otp}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
                 }
-              }
+              ]
             },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/users/login/verify",
+              "raw": "{{base_url}}/auth/me",
               "host": ["{{base_url}}"],
-              "path": ["users", "login", "verify"]
+              "path": ["auth", "me"]
             },
-            "description": "Verify OTP and receive access token and refresh token"
-          },
-          "response": []
-        },
-        {
-          "name": "Refresh Access Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has new access token\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('accessToken');",
-                  "    ",
-                  "    // Update access token in both environment and collection variables",
-                  "    if (pm.environment.has('accessToken')) {",
-                  "        pm.environment.set('accessToken', jsonData.accessToken);",
-                  "    }",
-                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
-                  "    ",
-                  "    console.log('✅ Access token refreshed successfully');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{base_url}}/users/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["users", "refresh"]
-            },
-            "description": "Get a new access token using refresh token"
+            "description": "Get the authenticated user's profile (_id, name, email, createdAt)"
           },
           "response": []
         },
@@ -184,19 +120,15 @@
                   "",
                   "pm.test(\"Logout successful\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('message');",
+                  "    pm.expect(jsonData.success).to.eql(true);",
                   "    ",
-                  "    // Clear tokens from both environment and collection variables",
+                  "    // Clear the token from both environment and collection variables",
                   "    if (pm.environment.has('accessToken')) {",
                   "        pm.environment.unset('accessToken');",
                   "    }",
-                  "    if (pm.environment.has('refreshToken')) {",
-                  "        pm.environment.unset('refreshToken');",
-                  "    }",
                   "    pm.collectionVariables.unset('accessToken');",
-                  "    pm.collectionVariables.unset('refreshToken');",
                   "    ",
-                  "    console.log('✅ Logged out - tokens cleared');",
+                  "    console.log('✅ Logged out - token cleared');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -222,16 +154,16 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/users/logout",
+              "raw": "{{base_url}}/auth/logout",
               "host": ["{{base_url}}"],
-              "path": ["users", "logout"]
+              "path": ["auth", "logout"]
             },
-            "description": "Logout user and invalidate refresh token"
+            "description": "Logout. The JWT itself isn't server-side invalidated (no refresh token to revoke) - this just confirms the call and the collection clears its stored copy."
           },
           "response": []
         }
       ],
-      "description": "Authentication endpoints for user login, token refresh, and logout"
+      "description": "Authentication endpoints - Google Sign-In only. There is no phone/OTP login and no refresh-token flow in this API."
     },
     {
       "name": "Memorizations",
@@ -247,9 +179,9 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response is an object\", function () {",
+                  "pm.test(\"Response has ranges\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.be.an('object');",
+                  "    pm.expect(jsonData.data).to.have.property('ranges');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -274,12 +206,12 @@
               "host": ["{{base_url}}"],
               "path": ["memorizations"]
             },
-            "description": "Get all memorizations for the authenticated user"
+            "description": "Get all memorized ranges for the authenticated user, grouped by surah (data.ranges: Record<surah, Range[]>)"
           },
           "response": []
         },
         {
-          "name": "Get Memorization by Chapter",
+          "name": "Add Memorization Range",
           "event": [
             {
               "listen": "test",
@@ -289,58 +221,9 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response is an array\", function () {",
+                  "pm.test(\"Response has ranges\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.be.an('array');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/memorizations/:chapter_number",
-              "host": ["{{base_url}}"],
-              "path": ["memorizations", ":chapter_number"],
-              "variable": [
-                {
-                  "key": "chapter_number",
-                  "value": "1",
-                  "description": "Chapter number (1-114)"
-                }
-              ]
-            },
-            "description": "Get memorizations for a specific chapter"
-          },
-          "response": []
-        },
-        {
-          "name": "Add Memorization",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has user data\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData).to.have.property('memorizations');",
+                  "    pm.expect(jsonData.data).to.have.property('ranges');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -367,7 +250,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"chapter_number\": 1,\n    \"from\": 1,\n    \"to\": 7\n}",
+              "raw": "{\n    \"surah\": 1,\n    \"from\": 1,\n    \"to\": 7\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -375,16 +258,390 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/memorizations/add",
+              "raw": "{{base_url}}/memorizations/range",
               "host": ["{{base_url}}"],
-              "path": ["memorizations", "add"]
+              "path": ["memorizations", "range"]
             },
-            "description": "Add a memorization range for a chapter (from verse to verse)"
+            "description": "Add a memorized ayah range for a surah. Overlapping/adjacent ranges in the same surah are merged automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Memorization Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has ranges\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('ranges');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memorizations/range/:surah/:from/:to",
+              "host": ["{{base_url}}"],
+              "path": ["memorizations", "range", ":surah", ":from", ":to"],
+              "variable": [
+                {
+                  "key": "surah",
+                  "value": "1",
+                  "description": "Surah number (1-114)"
+                },
+                {
+                  "key": "from",
+                  "value": "1",
+                  "description": "First ayah of the exact range to remove"
+                },
+                {
+                  "key": "to",
+                  "value": "7",
+                  "description": "Last ayah of the exact range to remove"
+                }
+              ]
+            },
+            "description": "Remove a memorized range. Must exactly match an existing stored range's from/to (no partial trim) - if it doesn't, this 404s with 'Range not found'."
           },
           "response": []
         }
       ],
       "description": "Memorization endpoints - requires authentication"
+    },
+    {
+      "name": "Revision Plan",
+      "item": [
+        {
+          "name": "Get Revision Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has both awrad lists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('incompleteAwrad');",
+                  "    pm.expect(jsonData.data).to.have.property('completedAwrad');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/revision-plan",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan"]
+            },
+            "description": "Get the authenticated user's revision plan (dailyCapacity, incompleteAwrad, completedAwrad)"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Revision Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Plan generated with empty completedAwrad\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.incompleteAwrad).to.be.an('array');",
+                  "    pm.expect(jsonData.data.completedAwrad).to.have.lengthOf(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dailyCapacity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/revision-plan/generate",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan", "generate"]
+            },
+            "description": "(Re)build the plan from scratch from all currently memorized ranges: wipes completedAwrad and rebuilds incompleteAwrad. dailyCapacity is a number of Mushaf pages per werd (1, 2, 3, ...), not ayat. Also the action used to start the next cycle after the plan is 'finished'."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Daily Capacity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Capacity updated, completedAwrad preserved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.dailyCapacity).to.eql(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dailyCapacity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/revision-plan/capacity",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan", "capacity"]
+            },
+            "description": "Change dailyCapacity mid-cycle. completedAwrad is left untouched; incompleteAwrad is rebuilt only from the ranges not yet completed this cycle."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Today's Werd",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has werd and status\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('werd');",
+                  "    pm.expect(jsonData.data).to.have.property('status');",
+                  "    pm.expect(['pending', 'completed', 'finished']).to.include(jsonData.data.status);",
+                  "",
+                  "    // Save today's werd id for the Complete Werd request",
+                  "    if (jsonData.data.werd && jsonData.data.werd._id) {",
+                  "        pm.collectionVariables.set('werdId', jsonData.data.werd._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/revision-plan/today",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan", "today"]
+            },
+            "description": "Get today's werd, derived from the plan (no separate revision log). status is 'pending' (not done yet), 'completed' (already done today), or 'finished' (cycle done - call Generate Revision Plan to start the next one)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Next Available Werd",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has werd\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('werd');",
+                  "",
+                  "    // Save next werd id for the Complete Werd request",
+                  "    if (jsonData.data.werd && jsonData.data.werd._id) {",
+                  "        pm.collectionVariables.set('werdId', jsonData.data.werd._id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/revision-plan/next",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan", "next"]
+            },
+            "description": "Get the next unfinished werd - always the front of incompleteAwrad (`werd: null` if the cycle is finished), with no date/status logic. Unlike Get Today's Werd, this ignores whether something was already completed today; use it for a plain 'what's next in the queue' view."
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Werd",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Werd marked completed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.status).to.eql('completed');",
+                  "    pm.expect(jsonData.data).to.have.property('werd');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"werdId\": \"{{werdId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/revision-plan/complete",
+              "host": ["{{base_url}}"],
+              "path": ["revision-plan", "complete"]
+            },
+            "description": "Complete the werd at the front of incompleteAwrad. werdId is a guard (must match the current front werd, from Get Today's Werd) - a repeat call with the same werdId after it's already completed is a safe no-op, it won't complete a second werd."
+          },
+          "response": []
+        }
+      ],
+      "description": "Revision plan endpoints - requires authentication. dailyCapacity is in Mushaf pages. Cycling through a plan never auto-recycles: once incompleteAwrad is empty, status is 'finished' until you explicitly call Generate Revision Plan again."
     }
   ],
   "event": [
@@ -418,13 +675,8 @@
       "type": "string"
     },
     {
-      "key": "phone",
-      "value": "+962785352060",
-      "type": "string"
-    },
-    {
-      "key": "otp",
-      "value": "",
+      "key": "idToken",
+      "value": "mock:eyJnb29nbGVJZCI6ICJkZXYtMSIsICJlbWFpbCI6ICJkZXZAZXhhbXBsZS5jb20iLCAibmFtZSI6ICJEZXYgVXNlciJ9",
       "type": "string"
     },
     {
@@ -433,7 +685,7 @@
       "type": "string"
     },
     {
-      "key": "refreshToken",
+      "key": "werdId",
       "value": "",
       "type": "string"
     }

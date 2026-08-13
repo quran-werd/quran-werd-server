@@ -12,10 +12,15 @@ export type Werd = {
   range: WerdRange;
 };
 
+export type CompletedWerd = Werd & {
+  completedAt: Date;
+};
+
 export interface IRevisionPlan extends Document {
   userId: mongoose.Types.ObjectId;
   dailyCapacity: number;
-  awrad: Werd[];
+  incompleteAwrad: Werd[];
+  completedAwrad: CompletedWerd[];
 }
 
 const WerdRangeSchema = new Schema(
@@ -35,6 +40,16 @@ const WerdSchema = new Schema(
   { _id: true }
 );
 
+const CompletedWerdSchema = new Schema(
+  {
+    order: { type: Number, required: true },
+    surah: { type: Number, required: true },
+    range: { type: WerdRangeSchema, required: true },
+    completedAt: { type: Date, required: true },
+  },
+  { _id: true }
+);
+
 const RevisionPlanSchema: Schema<IRevisionPlan> = new Schema(
   {
     userId: {
@@ -45,7 +60,8 @@ const RevisionPlanSchema: Schema<IRevisionPlan> = new Schema(
       index: true,
     },
     dailyCapacity: { type: Number, required: true },
-    awrad: { type: [WerdSchema], default: [] },
+    incompleteAwrad: { type: [WerdSchema], default: [] },
+    completedAwrad: { type: [CompletedWerdSchema], default: [] },
   },
   { timestamps: true }
 );
