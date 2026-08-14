@@ -211,7 +211,7 @@
           "response": []
         },
         {
-          "name": "Add Memorization Range",
+          "name": "Add Memorization Ranges",
           "event": [
             {
               "listen": "test",
@@ -221,9 +221,10 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has ranges\", function () {",
+                  "pm.test(\"Response has ranges and results\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.data).to.have.property('ranges');",
+                  "    pm.expect(jsonData.data.data).to.have.property('ranges');",
+                  "    pm.expect(jsonData.data).to.have.property('results');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -250,7 +251,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"surah\": 1,\n    \"from\": 1,\n    \"to\": 7\n}",
+              "raw": "{\n    \"ranges\": [\n        { \"surah\": 1, \"from\": 1, \"to\": 7 },\n        { \"surah\": 2, \"from\": 1, \"to\": 10 }\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -258,11 +259,11 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/memorizations/range",
+              "raw": "{{base_url}}/memorizations/ranges",
               "host": ["{{base_url}}"],
-              "path": ["memorizations", "range"]
+              "path": ["memorizations", "ranges"]
             },
-            "description": "Add a memorized ayah range for a surah. Overlapping/adjacent ranges in the same surah are merged automatically."
+            "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved."
           },
           "response": []
         },

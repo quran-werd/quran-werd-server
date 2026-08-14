@@ -11,30 +11,35 @@ export const getMemorizations = async (req: Request, res: Response) => {
   }
 };
 
-export const addRange = async (req: Request, res: Response) => {
-  const { surah, from, to } = req.body;
+export const addRanges = async (req: Request, res: Response) => {
+  const { ranges } = req.body;
 
-  if (
-    typeof surah !== "number" ||
-    typeof from !== "number" ||
-    typeof to !== "number"
-  ) {
-    return sendError(res, "surah, from, and to must be numbers", 400);
+  if (!Array.isArray(ranges) || ranges.length === 0) {
+    return sendError(res, "ranges must be a non-empty array", 400);
+  }
+
+  for (let index = 0; index < ranges.length; index++) {
+    const { surah, from, to } = ranges[index];
+    if (
+      typeof surah !== "number" ||
+      typeof from !== "number" ||
+      typeof to !== "number"
+    ) {
+      return sendError(
+        res,
+        `ranges[${index}]: surah, from, and to must be numbers`,
+        400
+      );
+    }
   }
 
   try {
-    const { data, merged } = await MemorizationService.addRange(
+    const { data, results } = await MemorizationService.addRanges(
       req.user_id!,
-      surah,
-      from,
-      to
+      ranges
     );
 
-    return sendSuccess(
-      res,
-      data,
-      merged ? "Ranges merged successfully" : "Range added successfully"
-    );
+    return sendSuccess(res, { data, results }, "Ranges added successfully");
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Internal server error";

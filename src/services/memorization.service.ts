@@ -67,36 +67,52 @@ export const getMemorizations = async (
   return toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]);
 };
 
-export const addRange = async (
+export type RangeInput = {
+  surah: number;
+  from: number;
+  to: number;
+};
+
+export type AddRangeResult = RangeInput & { merged: boolean };
+
+export const addRanges = async (
   userId: string,
-  surah: number,
-  from: number,
-  to: number,
-): Promise<{ data: MemorizationData; merged: boolean }> => {
-  const validationError = validateRange(surah, from, to);
-  if (validationError) {
-    throw new Error(validationError);
-  }
+  ranges: RangeInput[],
+): Promise<{ data: MemorizationData; results: AddRangeResult[] }> => {
+  ranges.forEach(({ surah, from, to }, index) => {
+    const validationError = validateRange(surah, from, to);
+    if (validationError) {
+      throw new Error(
+        `ranges[${index}] (surah ${surah}, ${from}–${to}): ${validationError}`,
+      );
+    }
+  });
 
   const doc = await getOrCreateMemorization(userId);
   const rangesObj = rangesMapToObject(doc.ranges);
-  const surahKey = String(surah);
-  const existing = (rangesObj[surahKey] || []).map(({ from: rangeFrom, to: rangeTo }) => ({
-    from: rangeFrom,
-    to: rangeTo,
-  }));
-  const beforeCount = existing.length;
-  const mergedRanges = addRangeToSurahRanges(existing, { from, to });
-  const merged = mergedRanges.length < beforeCount + 1;
+  const results: AddRangeResult[] = [];
 
-  rangesObj[surahKey] = toUniqueRanges(surah, mergedRanges);
+  for (const { surah, from, to } of ranges) {
+    const surahKey = String(surah);
+    const existing = (rangesObj[surahKey] || []).map(({ from: rangeFrom, to: rangeTo }) => ({
+      from: rangeFrom,
+      to: rangeTo,
+    }));
+    const beforeCount = existing.length;
+    const mergedRanges = addRangeToSurahRanges(existing, { from, to });
+    const merged = mergedRanges.length < beforeCount + 1;
+
+    rangesObj[surahKey] = toUniqueRanges(surah, mergedRanges);
+    results.push({ surah, from, to, merged });
+  }
+
   doc.ranges = rangesObj as unknown as Map<string, Range[]>;
   doc.markModified("ranges");
   await doc.save();
 
   return {
     data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
-    merged,
+    results,
   };
 };
 
