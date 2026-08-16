@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as MemorizationService from "../../services/memorization.service";
+import { resyncIncompleteAfterMemorizationDelete } from "../../services/revisionPlan.service";
 import { sendError, sendSuccess } from "../../utils/apiResponse";
 
 export const getMemorizations = async (req: Request, res: Response) => {
@@ -58,18 +59,31 @@ export const deleteRange = async (req: Request, res: Response) => {
   }
 
   try {
-    const data = await MemorizationService.deleteRange(
+    const { data, changed } = await MemorizationService.deleteRange(
       req.user_id!,
       surah,
       from,
       to
     );
-    return sendSuccess(res, data, "Range deleted successfully");
+
+    const planRegenerated = changed
+      ? await resyncIncompleteAfterMemorizationDelete(
+          req.user_id!,
+          surah,
+          from,
+          to
+        )
+      : false;
+
+    return sendSuccess(
+      res,
+      { data, changed, planRegenerated },
+      "Range deleted successfully"
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Internal server error";
-    const status =
-      message === "Range not found" ? 404 : message === "Internal server error" ? 500 : 400;
+    const status = message === "Internal server error" ? 500 : 400;
     return sendError(res, message, status);
   }
 };

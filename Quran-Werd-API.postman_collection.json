@@ -278,9 +278,11 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has ranges\", function () {",
+                  "pm.test(\"Response has ranges, changed, and planRegenerated\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.data).to.have.property('ranges');",
+                  "    pm.expect(jsonData).to.have.property('changed');",
+                  "    pm.expect(jsonData).to.have.property('planRegenerated');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -312,17 +314,17 @@
                 },
                 {
                   "key": "from",
-                  "value": "1",
-                  "description": "First ayah of the exact range to remove"
+                  "value": "4",
+                  "description": "First ayah to remove from memorization (need not match a stored range's boundary)"
                 },
                 {
                   "key": "to",
-                  "value": "7",
-                  "description": "Last ayah of the exact range to remove"
+                  "value": "5",
+                  "description": "Last ayah to remove from memorization (need not match a stored range's boundary)"
                 }
               ]
             },
-            "description": "Remove a memorized range. Must exactly match an existing stored range's from/to (no partial trim) - if it doesn't, this 404s with 'Range not found'."
+            "description": "Subtracts the given ayah range from whatever is currently memorized for that surah. Splits a stored range into two if the deletion falls in the middle of it (e.g. deleting 4-5 from a stored 1-7 range leaves 1-3 and 6-7), trims an edge, or removes ranges entirely - across all stored ranges for that surah that overlap. Ayahs outside anything stored are ignored rather than erroring. If nothing overlaps (including when no memorization exists yet for the user), this succeeds as a no-op with `changed: false`. If the deletion overlaps a wird still in the user's incomplete revision-plan queue, the plan's `incompleteAwrad` is automatically regenerated (`planRegenerated: true`); deletions touching only already-completed awrad, or no plan at all, leave the plan untouched.\n\nResponse: `{ data: { ranges }, changed: boolean, planRegenerated: boolean }`."
           },
           "response": []
         }

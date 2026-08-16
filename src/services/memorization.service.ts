@@ -1,7 +1,7 @@
 import Memorization, { Range, buildRangeId } from "../models/Memorization";
 import {
   addRangeToSurahRanges,
-  removeRangeFromSurahRanges,
+  subtractRangeFromRanges,
 } from "../utils/mergeRanges";
 import { validateRange } from "../utils/quranMetadata";
 
@@ -121,16 +121,18 @@ export const deleteRange = async (
   surah: number,
   from: number,
   to: number,
-): Promise<MemorizationData> => {
-  const doc = await Memorization.findOne({ userId });
-  if (!doc) {
-    throw new Error("Range not found");
+): Promise<{ data: MemorizationData; changed: boolean }> => {
+  const validationError = validateRange(surah, from, to);
+  if (validationError) {
+    throw new Error(validationError);
   }
+
+  const doc = await getOrCreateMemorization(userId);
 
   const rangesObj = rangesMapToObject(doc.ranges);
   const surahKey = String(surah);
   const existing = rangesObj[surahKey] || [];
-  const updated = removeRangeFromSurahRanges(
+  const updated = subtractRangeFromRanges(
     existing.map(({ from: rangeFrom, to: rangeTo }) => ({
       from: rangeFrom,
       to: rangeTo,
@@ -138,9 +140,21 @@ export const deleteRange = async (
     { from, to },
   );
 
-  const hadRange = updated.length < existing.length;
-  if (!hadRange) {
-    throw new Error("Range not found");
+  const existingAyahCount = existing.reduce(
+    (sum, range) => sum + (range.to - range.from + 1),
+    0,
+  );
+  const updatedAyahCount = updated.reduce(
+    (sum, range) => sum + (range.to - range.from + 1),
+    0,
+  );
+  const changed = updatedAyahCount < existingAyahCount;
+
+  if (!changed) {
+    return {
+      data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
+      changed: false,
+    };
   }
 
   if (updated.length === 0) {
@@ -153,7 +167,10 @@ export const deleteRange = async (
   doc.markModified("ranges");
   await doc.save();
 
-  return toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]);
+  return {
+    data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
+    changed: true,
+  };
 };
 
 export const getAllRangesFlat = (

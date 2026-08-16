@@ -97,6 +97,50 @@ const subtractCompletedFromRanges = (
   return result.sort((a, b) => a.surah - b.surah || a.from - b.from);
 };
 
+const rangesOverlap = (
+  a: { from: number; to: number },
+  b: { from: number; to: number }
+): boolean => a.from <= b.to && b.from <= a.to;
+
+export const resyncIncompleteAfterMemorizationDelete = async (
+  userId: string,
+  surah: number,
+  from: number,
+  to: number
+): Promise<boolean> => {
+  const plan = await RevisionPlan.findOne({ userId });
+  if (!plan) return false;
+
+  const overlapsIncomplete = plan.incompleteAwrad.some(
+    (werd) =>
+      werd.surah === surah &&
+      rangesOverlap(
+        { from: werd.range.from, to: werd.range.to },
+        { from, to }
+      )
+  );
+  if (!overlapsIncomplete) return false;
+
+  const memorizations = await getMemorizations(userId);
+  const allRanges = getAllRangesFlat(memorizations.ranges);
+
+  const remaining = subtractCompletedFromRanges(
+    allRanges,
+    plan.completedAwrad as unknown as Array<{
+      surah: number;
+      range: { from: number; to: number };
+    }>
+  );
+
+  plan.incompleteAwrad = generateAwrad(
+    remaining,
+    plan.dailyCapacity
+  ) as unknown as typeof plan.incompleteAwrad;
+  await plan.save();
+
+  return true;
+};
+
 export const getPlan = async (userId: string): Promise<PlanData | null> => {
   const plan = await RevisionPlan.findOne({ userId });
   if (!plan) return null;

@@ -29,22 +29,6 @@ export const addRangeToSurahRanges = (
   newRange: Range
 ): Range[] => mergeRanges([...existing, newRange]);
 
-export const removeRangeFromSurahRanges = (
-  existing: Range[],
-  target: Range
-): Range[] => {
-  const result: Range[] = [];
-
-  for (const range of existing) {
-    if (range.from === target.from && range.to === target.to) {
-      continue;
-    }
-    result.push(range);
-  }
-
-  return result;
-};
-
 export const subtractRangeFromRanges = (
   ranges: Range[],
   remove: Range
