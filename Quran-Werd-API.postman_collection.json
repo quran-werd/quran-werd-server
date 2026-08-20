@@ -491,7 +491,7 @@
           "response": []
         },
         {
-          "name": "Get Today's Werd",
+          "name": "Get Current Werd",
           "event": [
             {
               "listen": "test",
@@ -501,15 +501,16 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has werd and status\", function () {",
+                  "pm.test(\"Response has current, next and planStatus\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.data).to.have.property('werd');",
-                  "    pm.expect(jsonData.data).to.have.property('status');",
-                  "    pm.expect(['pending', 'completed', 'finished']).to.include(jsonData.data.status);",
+                  "    pm.expect(jsonData.data).to.have.property('current');",
+                  "    pm.expect(jsonData.data).to.have.property('next');",
+                  "    pm.expect(jsonData.data).to.have.property('planStatus');",
+                  "    pm.expect(['active', 'finished', 'no-plan']).to.include(jsonData.data.planStatus);",
                   "",
-                  "    // Save today's werd id for the Complete Werd request",
-                  "    if (jsonData.data.werd && jsonData.data.werd._id) {",
-                  "        pm.collectionVariables.set('werdId', jsonData.data.werd._id);",
+                  "    // Save current werd id for the Complete Werd request",
+                  "    if (jsonData.data.current && jsonData.data.current.werd && jsonData.data.current.werd._id) {",
+                  "        pm.collectionVariables.set('werdId', jsonData.data.current.werd._id);",
                   "    }",
                   "});"
                 ],
@@ -531,58 +532,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/revision-plan/today",
+              "raw": "{{base_url}}/revision-plan/current",
               "host": ["{{base_url}}"],
-              "path": ["revision-plan", "today"]
+              "path": ["revision-plan", "current"]
             },
-            "description": "Get today's werd, derived from the plan (no separate revision log). status is 'pending' (not done yet), 'completed' (already done today), or 'finished' (cycle done - call Generate Revision Plan to start the next one)."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Next Available Werd",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has werd\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.data).to.have.property('werd');",
-                  "",
-                  "    // Save next werd id for the Complete Werd request",
-                  "    if (jsonData.data.werd && jsonData.data.werd._id) {",
-                  "        pm.collectionVariables.set('werdId', jsonData.data.werd._id);",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/revision-plan/next",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan", "next"]
-            },
-            "description": "Get the next unfinished werd - always the front of incompleteAwrad (`werd: null` if the cycle is finished), with no date/status logic. Unlike Get Today's Werd, this ignores whether something was already completed today; use it for a plain 'what's next in the queue' view."
+            "description": "Get the current and next werd, derived from the plan (no separate revision log). `current` is the last completedAwrad entry if it was completed today (isCompleted: true), otherwise the front of incompleteAwrad (isCompleted: false); null if the plan is finished and nothing was completed today. `next` is whichever werd would become current once the present one is claimed - always null if there's nothing left to hand out. `planStatus` is 'active', 'finished' (incompleteAwrad is empty, regardless of when the last werd was completed - call Generate Revision Plan to start the next cycle), or 'no-plan'."
           },
           "response": []
         },
@@ -639,7 +593,7 @@
               "host": ["{{base_url}}"],
               "path": ["revision-plan", "complete"]
             },
-            "description": "Complete the werd at the front of incompleteAwrad. werdId is a guard (must match the current front werd, from Get Today's Werd) - a repeat call with the same werdId after it's already completed is a safe no-op, it won't complete a second werd."
+            "description": "Complete the werd at the front of incompleteAwrad. werdId is a guard (must match the current front werd, from Get Current Werd) - a repeat call with the same werdId after it's already completed is a safe no-op, it won't complete a second werd."
           },
           "response": []
         }

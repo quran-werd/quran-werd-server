@@ -230,53 +230,53 @@ export const updateCapacity = async (
   return toPlanData(plan as unknown as Parameters<typeof toPlanData>[0]);
 };
 
-export type TodayWerdResponse = {
-  werd: WerdData | CompletedWerdData | null;
-  status: "pending" | "completed" | "finished";
+export type CurrentWerd = { werd: WerdData; isCompleted: boolean };
+
+export type CurrentAndNextWerdResponse = {
+  current: CurrentWerd | null;
+  next: WerdData | null;
+  planStatus: "active" | "finished" | "no-plan";
 };
 
-export const getTodayWerd = async (
+export const getCurrentAndNextWerd = async (
   userId: string
-): Promise<TodayWerdResponse> => {
+): Promise<CurrentAndNextWerdResponse> => {
   const plan = await RevisionPlan.findOne({ userId });
   if (!plan) {
-    return { werd: null, status: "pending" };
+    return { current: null, next: null, planStatus: "no-plan" };
   }
 
-  if (plan.incompleteAwrad.length === 0) {
-    const last = plan.completedAwrad[plan.completedAwrad.length - 1];
-    return {
-      werd: last
-        ? toCompletedWerdData(last as unknown as CompletedWerdDoc)
-        : null,
-      status: "finished",
-    };
-  }
+  const planStatus = plan.incompleteAwrad.length === 0 ? "finished" : "active";
 
   const lastCompleted = plan.completedAwrad[plan.completedAwrad.length - 1];
   if (lastCompleted && isToday(lastCompleted.completedAt)) {
+    const next = plan.incompleteAwrad[0]
+      ? toWerdData(plan.incompleteAwrad[0] as unknown as WerdDoc)
+      : null;
     return {
-      werd: toCompletedWerdData(lastCompleted as unknown as CompletedWerdDoc),
-      status: "completed",
+      current: {
+        werd: toCompletedWerdData(lastCompleted as unknown as CompletedWerdDoc),
+        isCompleted: true,
+      },
+      next,
+      planStatus,
     };
   }
 
   const front = plan.incompleteAwrad[0];
-  return {
-    werd: toWerdData(front as unknown as WerdDoc),
-    status: "pending",
-  };
-};
-
-export const getNextWerd = async (
-  userId: string
-): Promise<WerdData | null> => {
-  const plan = await RevisionPlan.findOne({ userId });
-  if (!plan || plan.incompleteAwrad.length === 0) {
-    return null;
+  if (!front) {
+    return { current: null, next: null, planStatus };
   }
 
-  return toWerdData(plan.incompleteAwrad[0] as unknown as WerdDoc);
+  const nextInQueue = plan.incompleteAwrad[1];
+  return {
+    current: {
+      werd: toWerdData(front as unknown as WerdDoc),
+      isCompleted: false,
+    },
+    next: nextInQueue ? toWerdData(nextInQueue as unknown as WerdDoc) : null,
+    planStatus,
+  };
 };
 
 export const completeWerd = async (

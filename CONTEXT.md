@@ -30,8 +30,8 @@ _Avoid_: Round, pass
 The single source of truth for a user's schedule and progress: `dailyCapacity`,
 the ordered `incompleteAwrad` (Werds not yet done this cycle) and
 `completedAwrad` (Werds done this cycle, each with a `completedAt`). There is
-no separate log of completions — status for "today" is derived entirely from
-these two lists.
+no separate log of completions — the Current Werd and Next Werd are derived
+entirely from these two lists.
 _Avoid_: Schedule, revision log
 
 **dailyCapacity**:
@@ -41,8 +41,27 @@ boundaries (via `AYAH_MAP`/`PAGE_MAP`), except when truncated by the end of
 the Range it's drawn from.
 _Avoid_: Pace, speed
 
+**Current Werd**:
+The Werd the user is meant to act on right now. It's the last item of
+`completedAwrad` if that Werd's `completedAt` falls on today's date
+(meaning today's Werd is already done and is still "current" until the next
+one is claimed); otherwise it's the first item of `incompleteAwrad`. There
+is none once the plan is Finished and the last completion wasn't today.
+_Avoid_: Today's Werd, Today Werd — "current" is a queue position, not a
+calendar day, even though today's date is one of the two inputs to deriving it
+
+**Next Werd**:
+The Werd that becomes current once the present Current Werd is claimed.
+If the Current Werd came from `completedAwrad` (today's is already done),
+the Next Werd is the first item of `incompleteAwrad`; if the Current Werd
+came from `incompleteAwrad`, the Next Werd is the second item of
+`incompleteAwrad`. May be none.
+_Avoid_: Upcoming Werd, Following Werd
+
 **Finished** (plan status):
 The state once `incompleteAwrad` is empty — the user has completed every
-Werd in the current cycle. The plan stays `finished` until the user
-explicitly regenerates it; nothing happens automatically.
+Werd in the current cycle. This is independent of when the last Werd was
+completed: a plan finished yesterday is still Finished today, it doesn't
+revert to Active. The plan stays `finished` until the user explicitly
+regenerates it; nothing happens automatically.
 _Avoid_: Completed (that's the status of an individual Werd, not the plan)

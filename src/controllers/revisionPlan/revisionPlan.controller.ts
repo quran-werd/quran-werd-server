@@ -49,19 +49,12 @@ export const updateCapacity = async (req: Request, res: Response) => {
   }
 };
 
-export const getToday = async (req: Request, res: Response) => {
+export const getCurrent = async (req: Request, res: Response) => {
   try {
-    const data = await RevisionPlanService.getTodayWerd(req.user_id!);
+    const data = await RevisionPlanService.getCurrentAndNextWerd(
+      req.user_id!
+    );
     return sendSuccess(res, data);
-  } catch {
-    return sendError(res, "Internal server error", 500);
-  }
-};
-
-export const getNext = async (req: Request, res: Response) => {
-  try {
-    const werd = await RevisionPlanService.getNextWerd(req.user_id!);
-    return sendSuccess(res, { werd });
   } catch {
     return sendError(res, "Internal server error", 500);
   }
