@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import * as MemorizationService from "../../services/memorization.service";
-import { resyncIncompleteAfterMemorizationDelete } from "../../services/revisionPlan.service";
+import {
+  resyncIncompleteAfterMemorizationAdd,
+  resyncIncompleteAfterMemorizationDelete,
+} from "../../services/revisionPlan.service";
 import { sendError, sendSuccess } from "../../utils/apiResponse";
 
 export const getMemorizations = async (req: Request, res: Response) => {
@@ -35,12 +38,20 @@ export const addRanges = async (req: Request, res: Response) => {
   }
 
   try {
-    const { data, results } = await MemorizationService.addRanges(
+    const { data, results, changed } = await MemorizationService.addRanges(
       req.user_id!,
       ranges
     );
 
-    return sendSuccess(res, { data, results }, "Ranges added successfully");
+    const planRegenerated = changed
+      ? await resyncIncompleteAfterMemorizationAdd(req.user_id!)
+      : false;
+
+    return sendSuccess(
+      res,
+      { data, results, changed, planRegenerated },
+      "Ranges added successfully"
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Internal server error";

@@ -75,10 +75,21 @@ export type RangeInput = {
 
 export type AddRangeResult = RangeInput & { merged: boolean };
 
+const totalAyahCount = (rangesObj: Record<string, Range[]>): number =>
+  Object.values(rangesObj).reduce(
+    (sum, surahRanges) =>
+      sum + surahRanges.reduce((s, r) => s + (r.to - r.from + 1), 0),
+    0,
+  );
+
 export const addRanges = async (
   userId: string,
   ranges: RangeInput[],
-): Promise<{ data: MemorizationData; results: AddRangeResult[] }> => {
+): Promise<{
+  data: MemorizationData;
+  results: AddRangeResult[];
+  changed: boolean;
+}> => {
   ranges.forEach(({ surah, from, to }, index) => {
     const validationError = validateRange(surah, from, to);
     if (validationError) {
@@ -90,6 +101,7 @@ export const addRanges = async (
 
   const doc = await getOrCreateMemorization(userId);
   const rangesObj = rangesMapToObject(doc.ranges);
+  const beforeAyahCount = totalAyahCount(rangesObj);
   const results: AddRangeResult[] = [];
 
   for (const { surah, from, to } of ranges) {
@@ -106,6 +118,8 @@ export const addRanges = async (
     results.push({ surah, from, to, merged });
   }
 
+  const changed = totalAyahCount(rangesObj) > beforeAyahCount;
+
   doc.ranges = rangesObj as unknown as Map<string, Range[]>;
   doc.markModified("ranges");
   await doc.save();
@@ -113,6 +127,7 @@ export const addRanges = async (
   return {
     data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
     results,
+    changed,
   };
 };
 

@@ -65,3 +65,43 @@ completed: a plan finished yesterday is still Finished today, it doesn't
 revert to Active. The plan stays `finished` until the user explicitly
 regenerates it; nothing happens automatically.
 _Avoid_: Completed (that's the status of an individual Werd, not the plan)
+
+**Resync**:
+The operation that keeps `incompleteAwrad` consistent with the user's
+Ranges whenever they change outside of a full plan Regenerate. A Resync
+never touches `completedAwrad` — it only recomputes `incompleteAwrad` from
+current Ranges minus `completedAwrad`, then reassigns `order` from 1. A
+Werd's `order` is therefore a queue position within `incompleteAwrad`, not
+a durable identifier, and can momentarily coincide with an unrelated
+`order` value sitting in `completedAwrad`.
+_Avoid_: Regenerate — reserved for the full-plan reset (Generate /
+Update Capacity) that also wipes `completedAwrad`; a Resync never does that
+
+## Plan Resync
+
+Any change to a user's Ranges — adding or deleting — must keep
+`incompleteAwrad` in sync with the new memorization state. Both directions
+follow one rule:
+
+1. **Gate on `changed`.** The Range write (add or delete) reports whether
+   it actually altered total ayah coverage, not just whether a merge/split
+   happened structurally. A Resync only runs if `changed` is true —
+   resubmitting already-covered ayahs, or deleting ayahs that were never
+   stored, is a no-op.
+2. **Gate on relevance to the plan** (delete only). A deletion additionally
+   checks whether the removed span overlaps something still in
+   `incompleteAwrad`; if it only touched already-completed ayahs (or
+   nothing at all), the plan is left untouched. Adding has no equivalent
+   check — newly memorized ayahs can never already be represented in the
+   plan, so `changed` alone is sufficient to trigger a Resync.
+3. **Rebuild `incompleteAwrad` from scratch.** Pull the fresh, full set of
+   Ranges, subtract everything already in `completedAwrad` (per-surah
+   interval subtraction against `completedAwrad`'s own stored boundaries —
+   this is what still recovers a gap like `21-29` even after the
+   Memorization store has merged `1-20`, `21-29`, and `30-40` into one
+   stored Range `1-40`; the subtraction doesn't care how storage merged
+   things), then re-chunk into Werds and replace `incompleteAwrad`
+   wholesale.
+4. **No plan, no-op.** If the user has never called Generate, there is no
+   RevisionPlan to resync — the Range write still succeeds, but no plan is
+   touched or created.

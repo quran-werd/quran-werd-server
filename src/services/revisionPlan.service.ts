@@ -1,4 +1,4 @@
-import RevisionPlan from "../models/RevisionPlan";
+import RevisionPlan, { IRevisionPlan } from "../models/RevisionPlan";
 import { generateAwrad } from "../utils/generatePlan";
 import { subtractRangeFromRanges } from "../utils/mergeRanges";
 import { getAllRangesFlat, getMemorizations } from "./memorization.service";
@@ -102,6 +102,27 @@ const rangesOverlap = (
   b: { from: number; to: number }
 ): boolean => a.from <= b.to && b.from <= a.to;
 
+const rebuildIncompleteAwrad = async (
+  plan: IRevisionPlan
+): Promise<void> => {
+  const memorizations = await getMemorizations(plan.userId.toString());
+  const allRanges = getAllRangesFlat(memorizations.ranges);
+
+  const remaining = subtractCompletedFromRanges(
+    allRanges,
+    plan.completedAwrad as unknown as Array<{
+      surah: number;
+      range: { from: number; to: number };
+    }>
+  );
+
+  plan.incompleteAwrad = generateAwrad(
+    remaining,
+    plan.dailyCapacity
+  ) as unknown as typeof plan.incompleteAwrad;
+  await plan.save();
+};
+
 export const resyncIncompleteAfterMemorizationDelete = async (
   userId: string,
   surah: number,
@@ -121,22 +142,18 @@ export const resyncIncompleteAfterMemorizationDelete = async (
   );
   if (!overlapsIncomplete) return false;
 
-  const memorizations = await getMemorizations(userId);
-  const allRanges = getAllRangesFlat(memorizations.ranges);
+  await rebuildIncompleteAwrad(plan);
 
-  const remaining = subtractCompletedFromRanges(
-    allRanges,
-    plan.completedAwrad as unknown as Array<{
-      surah: number;
-      range: { from: number; to: number };
-    }>
-  );
+  return true;
+};
 
-  plan.incompleteAwrad = generateAwrad(
-    remaining,
-    plan.dailyCapacity
-  ) as unknown as typeof plan.incompleteAwrad;
-  await plan.save();
+export const resyncIncompleteAfterMemorizationAdd = async (
+  userId: string
+): Promise<boolean> => {
+  const plan = await RevisionPlan.findOne({ userId });
+  if (!plan) return false;
+
+  await rebuildIncompleteAwrad(plan);
 
   return true;
 };

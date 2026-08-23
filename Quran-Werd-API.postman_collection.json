@@ -221,10 +221,12 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has ranges and results\", function () {",
+                  "pm.test(\"Response has ranges, results, changed, and planRegenerated\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.data.data).to.have.property('ranges');",
                   "    pm.expect(jsonData.data).to.have.property('results');",
+                  "    pm.expect(jsonData.data).to.have.property('changed');",
+                  "    pm.expect(jsonData.data).to.have.property('planRegenerated');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -263,7 +265,7 @@
               "host": ["{{base_url}}"],
               "path": ["memorizations", "ranges"]
             },
-            "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved."
+            "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved. `changed` reflects whether the batch actually expanded total memorized ayah coverage (resubmitting already-covered ranges yields `changed: false`, even if some items report `merged: true`). If coverage expanded and the user has a revision plan, the plan's `incompleteAwrad` is automatically regenerated to include the newly memorized ayahs (`planRegenerated: true`); users with no plan yet, or batches that added no new coverage, leave the plan untouched.\n\nResponse: `{ data: { ranges }, results: [{ surah, from, to, merged }], changed: boolean, planRegenerated: boolean }`."
           },
           "response": []
         },
