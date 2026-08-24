@@ -1,15 +1,19 @@
 import express from "express";
-import { addMemorization, getMemorizationByChapterNumber, getMemorizations } from "../controllers";
+import {
+  addRanges,
+  deleteRange,
+  getMemorizations,
+} from "../controllers/memorization/memorization.controller";
 import { jwtAuth } from "../middlewares/auth.middleware";
 
-var memorizationRouter = express.Router();
+const memorizationRouter = express.Router();
 
 memorizationRouter.get("/", jwtAuth, getMemorizations);
-memorizationRouter.get("/:chapter_number", jwtAuth, getMemorizationByChapterNumber);
-
-// POST endpoint to save memorized ranges
-memorizationRouter.post("/", jwtAuth, addMemorization);
-// Legacy endpoint (kept for backward compatibility)
-memorizationRouter.post("/add", jwtAuth, addMemorization);
+memorizationRouter.post("/ranges", jwtAuth, addRanges);
+memorizationRouter.delete(
+  "/range/:surah/:from/:to",
+  jwtAuth,
+  deleteRange
+);
 
 export default memorizationRouter;
