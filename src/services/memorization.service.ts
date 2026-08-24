@@ -6,8 +6,6 @@ import {
 import { validateRange } from "../utils/quranMetadata";
 
 export type MemorizationData = {
-  _id: string;
-  userId: string;
   ranges: Record<string, Range[]>;
 };
 
@@ -25,12 +23,8 @@ const rangesMapToObject = (
 };
 
 const toMemorizationData = (doc: {
-  id: string;
-  userId: { toString(): string };
   ranges: Map<string, Range[]> | Record<string, Range[]>;
 }): MemorizationData => ({
-  _id: doc.id,
-  userId: doc.userId.toString(),
   ranges: rangesMapToObject(doc.ranges),
 });
 
@@ -86,7 +80,7 @@ export const addRanges = async (
   userId: string,
   ranges: RangeInput[],
 ): Promise<{
-  data: MemorizationData;
+  ranges: Record<string, Range[]>;
   results: AddRangeResult[];
   changed: boolean;
 }> => {
@@ -125,18 +119,24 @@ export const addRanges = async (
   await doc.save();
 
   return {
-    data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
+    ranges: rangesObj,
     results,
     changed,
   };
 };
+
+export type DeleteRangeResult = RangeInput;
 
 export const deleteRange = async (
   userId: string,
   surah: number,
   from: number,
   to: number,
-): Promise<{ data: MemorizationData; changed: boolean }> => {
+): Promise<{
+  ranges: Record<string, Range[]>;
+  results: DeleteRangeResult[];
+  changed: boolean;
+}> => {
   const validationError = validateRange(surah, from, to);
   if (validationError) {
     throw new Error(validationError);
@@ -164,12 +164,10 @@ export const deleteRange = async (
     0,
   );
   const changed = updatedAyahCount < existingAyahCount;
+  const results: DeleteRangeResult[] = [{ surah, from, to }];
 
   if (!changed) {
-    return {
-      data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
-      changed: false,
-    };
+    return { ranges: rangesObj, results, changed: false };
   }
 
   if (updated.length === 0) {
@@ -182,10 +180,7 @@ export const deleteRange = async (
   doc.markModified("ranges");
   await doc.save();
 
-  return {
-    data: toMemorizationData(doc as Parameters<typeof toMemorizationData>[0]),
-    changed: true,
-  };
+  return { ranges: rangesObj, results, changed: true };
 };
 
 export const getAllRangesFlat = (

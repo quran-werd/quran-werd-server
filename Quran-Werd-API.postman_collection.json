@@ -223,7 +223,7 @@
                   "",
                   "pm.test(\"Response has ranges, results, changed, and planRegenerated\", function () {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.data.data).to.have.property('ranges');",
+                  "    pm.expect(jsonData.data).to.have.property('ranges');",
                   "    pm.expect(jsonData.data).to.have.property('results');",
                   "    pm.expect(jsonData.data).to.have.property('changed');",
                   "    pm.expect(jsonData.data).to.have.property('planRegenerated');",
@@ -265,7 +265,7 @@
               "host": ["{{base_url}}"],
               "path": ["memorizations", "ranges"]
             },
-            "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved. `changed` reflects whether the batch actually expanded total memorized ayah coverage (resubmitting already-covered ranges yields `changed: false`, even if some items report `merged: true`). If coverage expanded and the user has a revision plan, the plan's `incompleteAwrad` is automatically regenerated to include the newly memorized ayahs (`planRegenerated: true`); users with no plan yet, or batches that added no new coverage, leave the plan untouched.\n\nResponse: `{ data: { ranges }, results: [{ surah, from, to, merged }], changed: boolean, planRegenerated: boolean }`."
+            "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved. `changed` reflects whether the batch actually expanded total memorized ayah coverage (resubmitting already-covered ranges yields `changed: false`, even if some items report `merged: true`). If coverage expanded and the user has a revision plan, the plan's `incompleteAwrad` is automatically regenerated to include the newly memorized ayahs (`planRegenerated: true`); users with no plan yet, or batches that added no new coverage, leave the plan untouched.\n\nResponse: `{ ranges, results: [{ surah, from, to, merged }], changed: boolean, planRegenerated: boolean }`."
           },
           "response": []
         },
@@ -280,11 +280,12 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has ranges, changed, and planRegenerated\", function () {",
+                  "pm.test(\"Response has ranges, results, changed, and planRegenerated\", function () {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.data).to.have.property('ranges');",
-                  "    pm.expect(jsonData).to.have.property('changed');",
-                  "    pm.expect(jsonData).to.have.property('planRegenerated');",
+                  "    pm.expect(jsonData.data).to.have.property('results');",
+                  "    pm.expect(jsonData.data).to.have.property('changed');",
+                  "    pm.expect(jsonData.data).to.have.property('planRegenerated');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -326,7 +327,7 @@
                 }
               ]
             },
-            "description": "Subtracts the given ayah range from whatever is currently memorized for that surah. Splits a stored range into two if the deletion falls in the middle of it (e.g. deleting 4-5 from a stored 1-7 range leaves 1-3 and 6-7), trims an edge, or removes ranges entirely - across all stored ranges for that surah that overlap. Ayahs outside anything stored are ignored rather than erroring. If nothing overlaps (including when no memorization exists yet for the user), this succeeds as a no-op with `changed: false`. If the deletion overlaps a wird still in the user's incomplete revision-plan queue, the plan's `incompleteAwrad` is automatically regenerated (`planRegenerated: true`); deletions touching only already-completed awrad, or no plan at all, leave the plan untouched.\n\nResponse: `{ data: { ranges }, changed: boolean, planRegenerated: boolean }`."
+            "description": "Subtracts the given ayah range from whatever is currently memorized for that surah. Splits a stored range into two if the deletion falls in the middle of it (e.g. deleting 4-5 from a stored 1-7 range leaves 1-3 and 6-7), trims an edge, or removes ranges entirely - across all stored ranges for that surah that overlap. Ayahs outside anything stored are ignored rather than erroring. If nothing overlaps (including when no memorization exists yet for the user), this succeeds as a no-op with `changed: false`. If the deletion overlaps a wird still in the user's incomplete revision-plan queue, the plan's `incompleteAwrad` is automatically regenerated (`planRegenerated: true`); deletions touching only already-completed awrad, or no plan at all, leave the plan untouched.\n\nResponse: `{ ranges, results: [{ surah, from, to }], changed: boolean, planRegenerated: boolean }`."
           },
           "response": []
         }

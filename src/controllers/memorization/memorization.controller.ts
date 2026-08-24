@@ -38,10 +38,11 @@ export const addRanges = async (req: Request, res: Response) => {
   }
 
   try {
-    const { data, results, changed } = await MemorizationService.addRanges(
-      req.user_id!,
-      ranges
-    );
+    const {
+      ranges: updatedRanges,
+      results,
+      changed,
+    } = await MemorizationService.addRanges(req.user_id!, ranges);
 
     const planRegenerated = changed
       ? await resyncIncompleteAfterMemorizationAdd(req.user_id!)
@@ -49,7 +50,7 @@ export const addRanges = async (req: Request, res: Response) => {
 
     return sendSuccess(
       res,
-      { data, results, changed, planRegenerated },
+      { ranges: updatedRanges, results, changed, planRegenerated },
       "Ranges added successfully"
     );
   } catch (error) {
@@ -70,12 +71,11 @@ export const deleteRange = async (req: Request, res: Response) => {
   }
 
   try {
-    const { data, changed } = await MemorizationService.deleteRange(
-      req.user_id!,
-      surah,
-      from,
-      to
-    );
+    const {
+      ranges: updatedRanges,
+      results,
+      changed,
+    } = await MemorizationService.deleteRange(req.user_id!, surah, from, to);
 
     const planRegenerated = changed
       ? await resyncIncompleteAfterMemorizationDelete(
@@ -88,7 +88,7 @@ export const deleteRange = async (req: Request, res: Response) => {
 
     return sendSuccess(
       res,
-      { data, changed, planRegenerated },
+      { ranges: updatedRanges, results, changed, planRegenerated },
       "Range deleted successfully"
     );
   } catch (error) {
