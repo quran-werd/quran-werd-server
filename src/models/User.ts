@@ -1,23 +1,30 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-// Define interface for User
 export interface IUser extends Document {
-  phone: string;
-  refreshToken?: string;
+  name: string;
+  email: string;
+  googleId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Create schema for User
 const UserSchema: Schema<IUser> = new Schema(
   {
-    phone: {
+    name: {
       type: String,
-      index: true,
-      unique: true,
       required: true,
     },
-    refreshToken: {
+    email: {
       type: String,
-      default: null,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    googleId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
     },
   },
   {
@@ -25,6 +32,5 @@ const UserSchema: Schema<IUser> = new Schema(
   }
 );
 
-// Create and export the User model
 const User = mongoose.model<IUser>("User", UserSchema);
 export default User;

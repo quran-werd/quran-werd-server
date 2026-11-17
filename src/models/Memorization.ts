@@ -1,50 +1,53 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-// Define interface for Memorization
+export type Range = {
+  rangeId: string;
+  from: number;
+  to: number;
+};
+
+export const buildRangeId = (
+  surah: number,
+  from: number,
+  to: number,
+): string => `${surah}:${from}:${to}`;
+
 export interface IMemorization extends Document {
   userId: mongoose.Types.ObjectId;
-  chapterNumber: number;
-  startVerse: number;
-  endVerse: number;
-  wordsCount: number;
+  ranges: Map<string, Range[]> | Record<string, Range[]>;
 }
 
-// Create schema for Memorization
+const RangeSchema = new Schema(
+  {
+    rangeId: { type: String, required: true },
+    from: { type: Number, required: true },
+    to: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
 const MemorizationSchema: Schema<IMemorization> = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true, // Index for faster queries
+      unique: true,
+      index: true,
     },
-    chapterNumber: {
-      type: Number,
-      required: true,
-      index: true, // Index for faster queries by chapter
-    },
-    startVerse: {
-      type: Number,
-      required: true,
-    },
-    endVerse: {
-      type: Number,
-      required: true,
-    },
-    wordsCount: {
-      type: Number,
-      required: true,
+    ranges: {
+      type: Map,
+      of: [RangeSchema],
+      default: {},
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 
-// Compound index for efficient queries (user + chapter)
-MemorizationSchema.index({ userId: 1, chapterNumber: 1 });
-
-// Create and export the Memorization model
-const Memorization = mongoose.model<IMemorization>("Memorization", MemorizationSchema);
+const Memorization = mongoose.model<IMemorization>(
+  "Memorization",
+  MemorizationSchema
+);
 export default Memorization;
-

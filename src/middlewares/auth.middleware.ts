@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { verifyAccessToken, JWTPayload } from "../services/jwt.service";
+import { verifyAccessToken } from "../services/jwt.service";
+import { sendError } from "../utils/apiResponse";
 
 export const jwtAuth = async (
   req: Request,
@@ -9,14 +10,13 @@ export const jwtAuth = async (
   const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
-    return res.sendStatus(401); // Unauthorized
+    return sendError(res, "Unauthorized", 401);
   }
 
-  // Verify access token (automatically checks expiration)
   const payload = verifyAccessToken(token);
 
   if (!payload) {
-    return res.sendStatus(403); // Forbidden - invalid or expired token
+    return sendError(res, "Unauthorized", 401);
   }
 
   req.user_id = payload.user_id;

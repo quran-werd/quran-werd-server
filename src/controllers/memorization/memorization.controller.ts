@@ -1,75 +1,100 @@
 import { Request, Response } from "express";
-import { MemorizationService } from "../../services";
+import * as MemorizationService from "../../services/memorization.service";
+import {
+  resyncIncompleteAfterMemorizationAdd,
+  resyncIncompleteAfterMemorizationDelete,
+} from "../../services/revisionPlan.service";
+import { sendError, sendSuccess } from "../../utils/apiResponse";
 
-export const addMemorization = async (req: Request, res: Response) => {
-  const { body, user_id } = req;
-  const { ranges } = body;
+export const getMemorizations = async (req: Request, res: Response) => {
+  try {
+    const data = await MemorizationService.getMemorizations(req.user_id!);
+    return sendSuccess(res, data);
+  } catch {
+    return sendError(res, "Internal server error", 500);
+  }
+};
 
-  // Validate request body
-  if (!ranges || !Array.isArray(ranges) || ranges.length === 0) {
-    return res
-      .status(400)
-      .json({ error: "ranges array is required and must not be empty" });
+export const addRanges = async (req: Request, res: Response) => {
+  const { ranges } = req.body;
+
+  if (!Array.isArray(ranges) || ranges.length === 0) {
+    return sendError(res, "ranges must be a non-empty array", 400);
   }
 
-  // Validate each range
-  for (const range of ranges) {
+  for (let index = 0; index < ranges.length; index++) {
+    const { surah, from, to } = ranges[index];
     if (
-      typeof range.chapterId !== "number" ||
-      typeof range.startVerse !== "number" ||
-      typeof range.endVerse !== "number" ||
-      typeof range.wordsCount !== "number"
+      typeof surah !== "number" ||
+      typeof from !== "number" ||
+      typeof to !== "number"
     ) {
-      return res.status(400).json({
-        error:
-          "Each range must have chapterId, startVerse, endVerse, and wordsCount as numbers",
-      });
+      return sendError(
+        res,
+        `ranges[${index}]: surah, from, and to must be numbers`,
+        400
+      );
     }
   }
 
-  const savedMemorizations = await MemorizationService.addMemorizedRanges(
-    user_id!,
-    ranges
-  );
+  try {
+    const {
+      ranges: updatedRanges,
+      results,
+      changed,
+    } = await MemorizationService.addRanges(req.user_id!, ranges);
 
-  if (!savedMemorizations || savedMemorizations.length === 0) {
-    return res.status(400).json({ error: "Failed to save memorizations" });
+    const planRegenerated = changed
+      ? await resyncIncompleteAfterMemorizationAdd(req.user_id!)
+      : false;
+
+    return sendSuccess(
+      res,
+      { ranges: updatedRanges, results, changed, planRegenerated },
+      "Ranges added successfully"
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    const status = message === "Internal server error" ? 500 : 400;
+    return sendError(res, message, status);
+  }
+};
+
+export const deleteRange = async (req: Request, res: Response) => {
+  const surah = Number(req.params.surah);
+  const from = Number(req.params.from);
+  const to = Number(req.params.to);
+
+  if (Number.isNaN(surah) || Number.isNaN(from) || Number.isNaN(to)) {
+    return sendError(res, "Invalid range parameters", 400);
   }
 
-  // Get the updated memorizations grouped by chapter
-  const memorizations = await MemorizationService.getMemorizations(user_id!);
+  try {
+    const {
+      ranges: updatedRanges,
+      results,
+      changed,
+    } = await MemorizationService.deleteRange(req.user_id!, surah, from, to);
 
-  res.status(200).json({
-    message: "Memorizations saved successfully",
-    memorizations: memorizations || {},
-  });
-};
+    const planRegenerated = changed
+      ? await resyncIncompleteAfterMemorizationDelete(
+          req.user_id!,
+          surah,
+          from,
+          to
+        )
+      : false;
 
-export const getMemorizations = async (req: Request, res: Response) => {
-  const { user_id } = req;
-
-  const memorizations = await MemorizationService.getMemorizations(user_id!);
-
-  res.status(200).json(memorizations || {});
-};
-
-// Get memorizations for a specific chapter
-export const getMemorizationByChapterNumber = async (
-  req: Request,
-  res: Response
-) => {
-  const {
-    user_id,
-    params: { chapter_number },
-  } = req;
-
-  const chapterMemorization =
-    await MemorizationService.getMemorizationByChapterNumber(
-      user_id!,
-      +chapter_number
+    return sendSuccess(
+      res,
+      { ranges: updatedRanges, results, changed, planRegenerated },
+      "Range deleted successfully"
     );
-
-  res.status(200).json({
-    [chapter_number]: chapterMemorization || [],
-  });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    const status = message === "Internal server error" ? 500 : 400;
+    return sendError(res, message, status);
+  }
 };
