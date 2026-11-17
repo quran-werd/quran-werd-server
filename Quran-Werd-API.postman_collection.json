@@ -57,10 +57,15 @@
             },
             "url": {
               "raw": "{{base_url}}/auth/google",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "google"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
             },
-            "description": "Sign in (or sign up) with a Google ID token. `idToken` normally must come from a Google Sign-In client SDK (web/mobile) - Postman can't mint one itself. For local/dev testing, the server accepts a `mock:<base64 json>` idToken instead (the default value of the `idToken` variable decodes to `{\"googleId\":\"dev-1\",\"email\":\"dev@example.com\",\"name\":\"Dev User\"}`) - it must be base64, not raw JSON, since Postman substitutes {{idToken}} into this raw JSON body unescaped and literal quotes would break it. Requires the server to have `AUTH_MOCK_GOOGLE=true` set - never enable that in production. Creates the user on first sign-in, or updates name/email if they changed. Returns a single JWT (`data.token`); there is no separate refresh token / refresh endpoint."
+            "description": "Sign in (or sign up) with a Google ID token. `idToken` normally must come from a Google Sign-In client SDK (web/mobile) - Postman can't mint one itself. For local/dev testing, the server accepts a `mock:<base64 json>` idToken instead (the default value of the `idToken` variable decodes to `{\"googleId\":\"dev-1\",\"email\":\"dev@example.com\",\"name\":\"Dev User\"}`) - it must be base64, not raw JSON, since Postman substitutes {{idToken}} into this raw JSON body unescaped and literal quotes would break it. Requires the server to have `AUTH_MOCK_GOOGLE=true` set - never enable that in production. Creates the user on first sign-in, or updates the email if it changed (the name is only set on first sign-in, so a name the user edited via PATCH /auth/me is kept). Returns a single JWT (`data.token`); there is no separate refresh token / refresh endpoint."
           },
           "response": []
         },
@@ -100,10 +105,73 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "me"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
             },
             "description": "Get the authenticated user's profile (_id, name, email, createdAt)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Name was updated\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var sent = JSON.parse(pm.request.body.raw).name.trim();",
+                  "    pm.expect(jsonData.data.name).to.eql(sent);",
+                  "    pm.expect(jsonData.data).to.have.property(\"email\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Update the authenticated user's display name. Body: `{ name: string }` - trimmed, must be 1-50 characters (400 otherwise). Returns the updated profile (_id, name, email, createdAt). The new name survives later Google sign-ins.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Name\"\n}"
+            }
           },
           "response": []
         },
@@ -155,8 +223,13 @@
             ],
             "url": {
               "raw": "{{base_url}}/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
             },
             "description": "Logout. The JWT itself isn't server-side invalidated (no refresh token to revoke) - this just confirms the call and the collection clears its stored copy."
           },
@@ -203,8 +276,12 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/memorizations",
-              "host": ["{{base_url}}"],
-              "path": ["memorizations"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memorizations"
+              ]
             },
             "description": "Get all memorized ranges for the authenticated user, grouped by surah (data.ranges: Record<surah, Range[]>)"
           },
@@ -262,8 +339,13 @@
             },
             "url": {
               "raw": "{{base_url}}/memorizations/ranges",
-              "host": ["{{base_url}}"],
-              "path": ["memorizations", "ranges"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memorizations",
+                "ranges"
+              ]
             },
             "description": "Add one or more memorized ayah ranges in a single request. Each item carries its own surah, so a batch can span multiple surahs. Overlapping/adjacent ranges (within the batch or against existing ones) are merged automatically. Validation is all-or-nothing: if any item is invalid, no changes are saved. `changed` reflects whether the batch actually expanded total memorized ayah coverage (resubmitting already-covered ranges yields `changed: false`, even if some items report `merged: true`). If coverage expanded and the user has a revision plan, the plan's `incompleteAwrad` is automatically regenerated to include the newly memorized ayahs (`planRegenerated: true`); users with no plan yet, or batches that added no new coverage, leave the plan untouched.\n\nResponse: `{ ranges, results: [{ surah, from, to, merged }], changed: boolean, planRegenerated: boolean }`."
           },
@@ -307,8 +389,16 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/memorizations/range/:surah/:from/:to",
-              "host": ["{{base_url}}"],
-              "path": ["memorizations", "range", ":surah", ":from", ":to"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "memorizations",
+                "range",
+                ":surah",
+                ":from",
+                ":to"
+              ],
               "variable": [
                 {
                   "key": "surah",
@@ -373,8 +463,12 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/revision-plan",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-plan"
+              ]
             },
             "description": "Get the authenticated user's revision plan (dailyCapacity, incompleteAwrad, completedAwrad)"
           },
@@ -430,8 +524,13 @@
             },
             "url": {
               "raw": "{{base_url}}/revision-plan/generate",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan", "generate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-plan",
+                "generate"
+              ]
             },
             "description": "(Re)build the plan from scratch from all currently memorized ranges: wipes completedAwrad and rebuilds incompleteAwrad. dailyCapacity is a number of Mushaf pages per werd (1, 2, 3, ...), not ayat. Also the action used to start the next cycle after the plan is 'finished'."
           },
@@ -486,8 +585,13 @@
             },
             "url": {
               "raw": "{{base_url}}/revision-plan/capacity",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan", "capacity"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-plan",
+                "capacity"
+              ]
             },
             "description": "Change dailyCapacity mid-cycle. completedAwrad is left untouched; incompleteAwrad is rebuilt only from the ranges not yet completed this cycle."
           },
@@ -536,8 +640,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/revision-plan/current",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan", "current"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-plan",
+                "current"
+              ]
             },
             "description": "Get the current and next werd, derived from the plan (no separate revision log). `current` is the last completedAwrad entry if it was completed today (isCompleted: true), otherwise the front of incompleteAwrad (isCompleted: false); null if the plan is finished and nothing was completed today. `next` is whichever werd would become current once the present one is claimed - always null if there's nothing left to hand out. `planStatus` is 'active', 'finished' (incompleteAwrad is empty, regardless of when the last werd was completed - call Generate Revision Plan to start the next cycle), or 'no-plan'."
           },
@@ -593,8 +702,13 @@
             },
             "url": {
               "raw": "{{base_url}}/revision-plan/complete",
-              "host": ["{{base_url}}"],
-              "path": ["revision-plan", "complete"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "revision-plan",
+                "complete"
+              ]
             },
             "description": "Complete the werd at the front of incompleteAwrad. werdId is a guard (must match the current front werd, from Get Current Werd) - a repeat call with the same werdId after it's already completed is a safe no-op, it won't complete a second werd."
           },
